@@ -40,8 +40,8 @@ class Negotium:
         host = broker_url.split('/')[2].split(':')[0]
         port = int(broker_url.split('/')[2].split(':')[1])
 
-        self.consumer = _Consumer(db=db, host=host, port=port, logfile=logfile)
-        self.publisher = _Publisher(db=db, host=host, port=port, logfile=logfile)
+        self.consumer = _Consumer(db=db, host=host, port=port, app_name=app_name, logfile=logfile)
+        self.publisher = _Publisher(db=db, host=host, port=port, app_name=app_name, logfile=logfile)
         self.logfile = logfile
 
     def start(self, *args, **kwargs):

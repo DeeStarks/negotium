@@ -3,8 +3,8 @@ import redis
 import inspect
 import importlib
 import json
+import os
 import signal
-import sys
 import time
 from multiprocessing import Process
 
@@ -13,9 +13,13 @@ from negotium.utils.logger import log
 
 
 class _Consumer:
-    def __init__(self, db: int, host: str, port: int, logfile: str=None):
+    def __init__(self, db: int, host: str, port: int, app_name: str, logfile: str=None):
         self.connection = redis.Redis(db=db, host=host, port=port)
+        self._is_closed = False
+        self.app_name = app_name
         self.logfile = logfile
+        self._process_consume = None
+        self._process_consume_scheduled = None
 
     def _close_connection(self):
         """Close the connection
@@ -26,16 +30,24 @@ class _Consumer:
         """Consume messages from the queue
         """
         while True:
-            message = self.connection.blpop(DEFAULT_QUEUE)
+            # check if connection is closed
+            if self._is_closed:
+                return
+            message = self.connection.blpop(DEFAULT_QUEUE + "__" + self.app_name)
             self._callback(message[1])
+            # sleep for 1 second
+            time.sleep(1)
 
     def _consume_scheduled_tasks(self, *args, **kwargs):
         """Load scheduled tasks
         """
         while True:
+            # check if connection is closed
+            if self._is_closed:
+                return
             current_time = datetime.datetime.now().timestamp()
             # get the tasks
-            tasks = self.connection.zrangebyscore(DEFAULT_SCHEDULER_SORTED_SET, 0, current_time)
+            tasks = self.connection.zrangebyscore(DEFAULT_SCHEDULER_SORTED_SET + "__" + self.app_name, 0, current_time)
             # loop through the tasks
             for task in tasks:
                 # get the task
@@ -45,7 +57,7 @@ class _Consumer:
                 # get the task
                 task = task.get('_task')
                 # remove the task from the sorted set
-                self.connection.zrem(DEFAULT_SCHEDULER_SORTED_SET, json.dumps({
+                self.connection.zrem(DEFAULT_SCHEDULER_SORTED_SET + "__" + self.app_name, json.dumps({
                     '_task': task,
                     '_eta': eta
                 }))
@@ -64,7 +76,7 @@ class _Consumer:
         """
         self._execute_task(body)
         # remove the task from the queue
-        self.connection.lrem(DEFAULT_SCHEDULER_QUEUE, 0, json.dumps({
+        self.connection.lrem(DEFAULT_SCHEDULER_QUEUE + "__" + self.app_name, 0, json.dumps({
             '_task': json.loads(body),
             '_eta': eta
         }))
@@ -103,16 +115,37 @@ class _Consumer:
     def run(self):
         """Run the consumers in a separate process
         """
-        # create a new process
-        p = Process(target=self._consume)
-        # start the process
-        p.start()
-        # create a new process
-        p2 = Process(target=self._consume_scheduled_tasks)
-        # start the process
-        p2.start()
+        # create processes
+        self._process_consume = Process(target=self._consume)
+        self._process_consume_scheduled = Process(target=self._consume_scheduled_tasks)
+        # start processes
+        self._process_consume.start()
+        self._process_consume_scheduled.start()
+
+        # register a signal handler
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
+
+        # wait for both processes to finish
+        # p.join()
+        # p2.join()
+
+    def _signal_handler(self, sig, frame):
+        """Handle signals
+        """
+        # close the connection
+        self.close()
+        # exit
+        os._exit(1)
 
     def close(self):
         """Close the connection
         """
+        self._is_closed = True
         self._close_connection()
+
+        # terminate processes
+        if self._process_consume and self._process_consume.is_alive():
+            self._process_consume.terminate()
+        if self._process_consume_scheduled and self._process_consume_scheduled.is_alive():
+            self._process_consume_scheduled.terminate()

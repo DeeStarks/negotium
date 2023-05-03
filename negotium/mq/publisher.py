@@ -6,12 +6,13 @@ from negotium.settings import DEFAULT_QUEUE, DEFAULT_SCHEDULER_QUEUE, DEFAULT_SC
 from negotium.utils.logger import log
 
 class _Publisher:
-    def __init__(self, db: int, host: str, port: int, logfile: str=None):
+    def __init__(self, db: int, host: str, port: int, app_name: str, logfile: str=None):
         self.connection = None
-        self.logfile = logfile
         self.db = db
         self.host = host
         self.port = port
+        self.app_name = app_name
+        self.logfile = logfile
 
     def _create_connection(self):
         """Create a connection to the message broker
@@ -32,9 +33,10 @@ class _Publisher:
                 '_task': data,
                 '_eta': eta.strftime('%Y-%m-%d %H:%M:%S.%f')
             }
-            self.connection.rpush(DEFAULT_SCHEDULER_QUEUE, json.dumps(data))
+            self.connection.rpush(DEFAULT_SCHEDULER_QUEUE + "__" + self.app_name, json.dumps(data))
             # zadd
             timestamp = datetime.datetime.strptime(eta.strftime('%Y-%m-%d %H:%M:%S.%f'), '%Y-%m-%d %H:%M:%S.%f').timestamp()
-            self.connection.zadd(DEFAULT_SCHEDULER_SORTED_SET, {json.dumps(data): timestamp})
+            self.connection.zadd(DEFAULT_SCHEDULER_SORTED_SET + "__" + self.app_name, {json.dumps(data): timestamp})
         else:
-            self.connection.rpush(DEFAULT_QUEUE, json.dumps(data))
+            self.connection.rpush(DEFAULT_QUEUE + "__" + self.app_name, json.dumps(data))
+
