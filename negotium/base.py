@@ -78,6 +78,7 @@ class Negotium:
 
         wrapper.delay = lambda *args, **kwargs: _delay(self.publisher, {
             'app_name': self.app_name,
+            'package_dir': '/'.join(inspect.getfile(func).split('/')[:-1]),
             'package_name': inspect.getfile(func).split('/')[-2],
             'module_name': inspect.getmodulename(inspect.getfile(func)),
             'function_name': func.__name__,
@@ -87,6 +88,7 @@ class Negotium:
         })
         wrapper.apply_async = lambda eta, args: _apply_async(self.publisher, {
             'app_name': self.app_name,
+            'package_dir': '/'.join(inspect.getfile(func).split('/')[:-1]),
             'package_name': inspect.getfile(func).split('/')[-2],
             'module_name': inspect.getmodulename(inspect.getfile(func)),
             'function_name': func.__name__,

@@ -5,6 +5,7 @@ import importlib
 import json
 import os
 import signal
+import sys
 import time
 from multiprocessing import Process
 
@@ -90,6 +91,7 @@ class _Consumer:
 
         # get function arguments
         app_name = body.get('app_name')
+        package_dir = body.get('package_dir')
         package_name = body.get('package_name')
         module_name = body.get('module_name')
         function_name = body.get('function_name')
@@ -99,11 +101,13 @@ class _Consumer:
         log(self.logfile, app_name, 
             f"{'[Scheduled] ' if is_scheduled else ''}Executing (task: {function_name})", level="INFO")
         
-        # import the module
-        module = importlib.import_module(f"{package_name}.{module_name}")
-        # get the function
-        function = getattr(module, function_name)
+        # import
+        spec = importlib.util.spec_from_file_location(f"{module_name}.{function_name}", f"{package_dir}/{module_name}.py")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[f"{module_name}.{function_name}"] = module
+        spec.loader.exec_module(module)
         # execute the function
+        function = getattr(module, function_name)
         try:
             res = function(*args, **kwargs)
             log(self.logfile, app_name, 
@@ -127,8 +131,8 @@ class _Consumer:
         signal.signal(signal.SIGTERM, self._signal_handler)
 
         # wait for both processes to finish
-        # p.join()
-        # p2.join()
+        # self._process_consume.join()
+        # self._process_consume_scheduled.join()
 
     def _signal_handler(self, sig, frame):
         """Handle signals
