@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "negotium"
+description = "A very simple asynchronous task/job queue"
+readme = "README.md"
+version = "0.2.0"
+requires-python = ">=3.7"
+dependencies = [
+    "async-timeout==4.0.2",
+    "redis==4.5.4",
+    "sortedcontainers==2.4.0",
+    "typeguard==3.0.2",
+    "typing_extensions==4.5.0",
+    "croniter==1.3.14",
+]

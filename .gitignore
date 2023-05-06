@@ -1,5 +1,6 @@
+.vscode
+__pycache__
 Pipfile
 *.log
 negotium.egg-info
-pyproject.toml
 dist
