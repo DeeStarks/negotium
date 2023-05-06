@@ -8,6 +8,13 @@ A simple, lightweight, and easy-to-use task or job queue for Python. It tries to
 pip install negotium
 ```
 
+## Features
+
+- Asynchronous task execution
+- Scheduled task execution
+- Dynamic periodic task execution
+- Task cancellation: All tasks are cancellable using the UUID returned by the task execution methods: `delay`, `apply_async`, and `apply_periodic_async`
+
 ## Usage
 
 ```python
@@ -20,15 +27,44 @@ app.start()
 @app.task
 def add(x, y):
     return x + y
+```
 
-# --- app.py (another module) ----
-from main import app
+#### Delayed task execution
 
-# Run the task asynchronously
+```python
 add.delay(1, 2)
+```
 
-# Schedule the task to run at a specific time
+#### Scheduled task execution
+
+```python
 add.apply_async(args=(1, 2), eta=datetime.datetime.now() + datetime.timedelta(seconds=10))
+```
+
+#### Dynamic periodic task execution
+
+> Note: Periodic tasks are scheduled using `negotium.schedules.Crontab` object. The `Crontab` object takes the following arguments:
+> - `minute`: The minute to run the task at
+> - `hour`: The hour to run the task at
+> - `day`: The day of the week to run the task at
+> - `month`: The day of the month to run the task at
+> - `weekday`: The month of the year to run the task at
+> 
+> Or, you can pass a raw crontab expression as a string. For example: `* * * * *` will run the task every minute.
+
+
+```python
+from main import app
+from negotium.schedules import Crontab
+
+# run the task every minute
+task_id = add.apply_periodic_async(args=(1, 2), cron=Crontab(minute=1))
+
+# with a raw crontab expression
+task_id = add.apply_periodic_async(args=(1, 2), cron=Crontab(expression="* * * * *"))
+
+# to cancel, import the app object and call the `cancel` method
+app.cancel(task_id)
 ```
 
 ### Using in a Django project
@@ -74,6 +110,7 @@ def add(x, y):
 ```python
 # --- example/views.py ---
 from example.tasks import add
+from negotium.schedules import Crontab
 
 def my_async_view(request):
     add.delay(1, 2) # <-- Run the task asynchronously
@@ -81,8 +118,12 @@ def my_async_view(request):
 
 def my_scheduled_view(request):
     add.apply_async(
-        args=(1, 2), eta=datetime.datetime.now() + \
-            datetime.timedelta(seconds=10)) # <-- Schedule the task to run at a specific time
+        args=(1, 2), eta=datetime.datetime.now() + datetime.timedelta(seconds=10)
+    ) # <-- Schedule the task to run at a specific time
+    return HttpResponse("Hello, world!")
+
+def my_periodic_view(request):
+    add.apply_periodic_async(args=(1, 2), cron=Crontab(expression="* * * * *"))
     return HttpResponse("Hello, world!")
 ```
 
