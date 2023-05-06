@@ -3,7 +3,7 @@ import inspect
 from functools import wraps
 
 from .settings import DEFAULT_HOST, DEFAULT_PORT, DEFAULT_LOGFILE
-from .task import _delay, _apply_async
+from .task import _delay, _apply_async, _apply_periodic_async
 from negotium.mq.consumer import _Consumer
 from negotium.mq.publisher import _Publisher
 from negotium.utils.logger import log
@@ -76,24 +76,29 @@ class Negotium:
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
 
-        wrapper.delay = lambda *args, **kwargs: _delay(self.publisher, {
+        d = {
             'app_name': self.app_name,
             'package_dir': '/'.join(inspect.getfile(func).split('/')[:-1]),
             'package_name': inspect.getfile(func).split('/')[-2],
             'module_name': inspect.getmodulename(inspect.getfile(func)),
             'function_name': func.__name__,
-            'args': args,
-            'kwargs': kwargs,
             'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        })
-        wrapper.apply_async = lambda eta, args: _apply_async(self.publisher, {
-            'app_name': self.app_name,
-            'package_dir': '/'.join(inspect.getfile(func).split('/')[:-1]),
-            'package_name': inspect.getfile(func).split('/')[-2],
-            'module_name': inspect.getmodulename(inspect.getfile(func)),
-            'function_name': func.__name__,
-            'args': args,
-            'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        }, eta)
+        }
+        wrapper.delay = lambda *args, **kwargs: _delay(self.publisher, {**d, 'args': args, 'kwargs': kwargs})
+        wrapper.apply_async = lambda eta, args: _apply_async(self.publisher, {**d,'args': args}, eta)
+
+        def apply_periodic_async(cron, args):
+            uuid_ = _apply_periodic_async(self.publisher, {**d, 'args': args}, cron)
+            # restart the consumer to pick up the new periodic task
+            self.consumer._consume_periodic_tasks()
+            return uuid_
+        wrapper.apply_periodic_async = apply_periodic_async
         return wrapper
 
+    def cancel(self, uuid_: str):
+        """Cancel a scheduled task
+
+        Example:
+            negotium.cancel(uuid_)
+        """
+        self.consumer._delete_message(uuid_)
