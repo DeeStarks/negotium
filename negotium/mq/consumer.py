@@ -10,6 +10,7 @@ import sys
 import time
 from threading import Thread, Timer
 
+from negotium.brokers.main import MessageBroker, BROKER_REDIS
 from negotium.mq.trackers import _MessageTracker
 from negotium.settings import (
     _MESSAGE_MAIN, _MESSAGE_SCHEDULER, _MESSAGE_SCHEDULER_SORTED_SET, _MESSAGE_PERIODIC_TASKS
@@ -18,9 +19,10 @@ from negotium.utils.logger import log
 
 
 class _Consumer:
-    def __init__(self, db: int, host: str, port: int, app_name: str, logfile: str=None):
-        self.connection = redis.Redis(db=db, host=host, port=port)
-        self._tracker = _MessageTracker(self.connection, app_name)
+    def __init__(self, broker: MessageBroker, app_name: str, logfile: str=None):
+        self.broker = broker
+        self.connection = broker.connect()
+        self._tracker = _MessageTracker(broker, app_name)
         self._is_closed = False
         self.app_name = app_name
         self.logfile = logfile
@@ -41,37 +43,48 @@ class _Consumer:
     def _consume(self, *args, **kwargs):
         """Consume messages from the queue
         """
-        while True:
-            if self._is_closed:
-                return
-            message = self.connection.blpop(_MESSAGE_MAIN + "__" + self.app_name)
-            self._callback(message[1])
-            time.sleep(1)
+        if self.broker.get_broker_name() == BROKER_REDIS:
+            while True:
+                if self._is_closed:
+                    return
+                message = self.connection.blpop(_MESSAGE_MAIN + "__" + self.app_name)
+                self._callback(message[1])
+                time.sleep(1)
+        else:
+            raise NotImplementedError("Broker not implemented")
 
     def _consume_scheduled_tasks(self, *args, **kwargs):
         """Load scheduled tasks
         """
-        while True:
-            if self._is_closed:
-                return
-            current_time = datetime.datetime.now().timestamp()
-            tasks = self.connection.zrangebyscore(_MESSAGE_SCHEDULER_SORTED_SET + "__" + self.app_name, 0, current_time)
-            for task in tasks:
-                task = json.loads(task.decode('utf-8'))
-                eta = task.get('_eta')
-                task = task.get('_task')
-                self.connection.zrem(_MESSAGE_SCHEDULER_SORTED_SET + "__" + self.app_name, json.dumps({
-                    '_task': task,
-                    '_eta': eta
-                }))
-                # execute task
-                self._callback_scheduled(json.dumps(task), eta)
-            time.sleep(1)
+        if self.broker.get_broker_name() == BROKER_REDIS:
+            while True:
+                if self._is_closed:
+                    return
+                current_time = datetime.datetime.now().timestamp()
+                tasks = self.connection.zrangebyscore(_MESSAGE_SCHEDULER_SORTED_SET + "__" + self.app_name, 0, current_time)
+                for task in tasks:
+                    task = json.loads(task.decode('utf-8'))
+                    eta = task.get('_eta')
+                    task = task.get('_task')
+                    self.connection.zrem(_MESSAGE_SCHEDULER_SORTED_SET + "__" + self.app_name, json.dumps({
+                        '_task': task,
+                        '_eta': eta
+                    }))
+                    # execute task
+                    self._callback_scheduled(json.dumps(task), eta)
+                time.sleep(1)
+        else:
+            raise NotImplementedError("Broker not implemented")
 
     def _consume_periodic_tasks(self, *args, **kwargs):
         """Load periodic tasks
         """
-        tasks = self.connection.lrange(_MESSAGE_PERIODIC_TASKS + "__" + self.app_name, 0, -1)
+        tasks = []
+        if self.broker.get_broker_name() == BROKER_REDIS:
+            tasks = self.connection.lrange(_MESSAGE_PERIODIC_TASKS + "__" + self.app_name, 0, -1)
+        else:
+            raise NotImplementedError("Broker not implemented")
+
         for task in tasks:
             body = json.loads(task.decode('utf-8'))
             cron = body.get('_cron')
@@ -152,14 +165,6 @@ class _Consumer:
         self._thread_consume.start()
         self._thread_consume_scheduled.start()
         self._thread_consume_periodic.start()
-
-    def _signal_handler(self, sig, frame):
-        """Handle signals
-        """
-        # close the connection
-        self.close()
-        # exit
-        os._exit(1)
 
     def close(self):
         """Close the connection

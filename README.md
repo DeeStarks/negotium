@@ -1,6 +1,6 @@
 # Negotium
 
-A simple, lightweight, and easy-to-use task or job queue for Python. It tries to mimic the implementation of celery and celery beat, but without the complexity and overhead. For now, it offers only a minimal set of features, which will be expanded. It also currently only supports Redis as the broker; however, it is planned to support other brokers in the future.
+A simple, lightweight, and easy-to-use task/job queue for Python. It tries to mimic the implementation of celery and celery beat, but without the complexity and overhead. For now, it offers only a minimal set of features, which will be expanded. It also currently only supports Redis as the broker; however, it is planned to support other brokers in the future.
 
 ## Installation
 
@@ -20,8 +20,19 @@ pip install negotium
 ```python
 # ---- main.py (app entry point) ----
 from negotium import Negotium
+from negotium.brokers import Redis
 
-app = Negotium(broker_url="redis://localhost:6379/0", app_name="my_app")
+# create broker
+broker = Redis(
+    host='localhost',
+    port=6379,
+    user='default', # optional
+    password='password', # optional
+    db=0 # optional (defaults to 0)
+)
+
+# create negotium app
+app = Negotium(app_name="<YOUR_APP_NAME>", broker=broker)
 app.start()
 
 @app.task
@@ -63,7 +74,7 @@ task_id = add.apply_periodic_async(args=(1, 2), cron=Crontab(minute=1))
 # with a raw crontab expression
 task_id = add.apply_periodic_async(args=(1, 2), cron=Crontab(expression="* * * * *"))
 
-# to cancel, import the app object and call the `cancel` method
+# to cancel, call the `cancel` method
 app.cancel(task_id)
 ```
 
@@ -86,13 +97,22 @@ my_project/
 import os
 
 from negotium import Negotium
+from negotium.brokers import Redis
 
 # Set the django settings module
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'my_project.settings')
 
+# Create the broker
+broker = Redis(
+    host='localhost',
+    port=6379,
+    user='default', # optional
+    password='password', # optional
+    db=0 # optional (defaults to 0)
+)
+
 # Create the negotium app
-# If not specified, the broker url defaults to redis://localhost:6379/0
-app = Negotium(broker_url="redis://localhost:6379/0", app_name="my_app")
+app = Negotium(app_name="<YOUR_APP_NAME>", broker=broker)
 app.start()
 ```
 

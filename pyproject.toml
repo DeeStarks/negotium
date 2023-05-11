@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "negotium"
-description = "A very simple asynchronous task/job queue"
+description = "A lightweight and easy to use task queue/scheduler"
 readme = "README.md"
-version = "0.2.0"
+version = "0.2.1"
 requires-python = ">=3.7"
 dependencies = [
     "async-timeout==4.0.2",

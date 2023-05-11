@@ -4,6 +4,7 @@ from functools import wraps
 
 from .settings import DEFAULT_HOST, DEFAULT_PORT, DEFAULT_LOGFILE
 from .task import _delay, _apply_async, _apply_periodic_async
+from negotium.brokers.main import MessageBroker
 from negotium.mq.consumer import _Consumer
 from negotium.mq.publisher import _Publisher
 from negotium.utils.logger import log
@@ -28,20 +29,16 @@ class Negotium:
 
     Note: This class should be instantiated at the entry point of your application.
     """
-    def __init__(self, app_name: str="", broker_url: str="", logfile: str=DEFAULT_LOGFILE):
+    def __init__(self, app_name: str, broker: MessageBroker, logfile: str=DEFAULT_LOGFILE):
         self.app_name = app_name
         if not self.app_name:
             raise ValueError("app_name must be set")
 
-        if not broker_url:
-            broker_url = f"redis://{DEFAULT_HOST}:{DEFAULT_PORT}/0"
+        if not broker.get_broker_name():
+            raise ValueError("invalid broker")
 
-        db = int(broker_url.split('/')[-1])
-        host = broker_url.split('/')[2].split(':')[0]
-        port = int(broker_url.split('/')[2].split(':')[1])
-
-        self.consumer = _Consumer(db=db, host=host, port=port, app_name=app_name, logfile=logfile)
-        self.publisher = _Publisher(db=db, host=host, port=port, app_name=app_name, logfile=logfile)
+        self.consumer = _Consumer(broker=broker, app_name=app_name, logfile=logfile)
+        self.publisher = _Publisher(broker=broker, app_name=app_name, logfile=logfile)
         self.logfile = logfile
 
     def start(self, *args, **kwargs):
