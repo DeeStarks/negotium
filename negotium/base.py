@@ -2,7 +2,7 @@ import datetime
 import inspect
 from functools import wraps
 
-from .settings import DEFAULT_HOST, DEFAULT_PORT, DEFAULT_LOGFILE
+from .settings import DEFAULT_HOST, DEFAULT_PORT
 from .task import _delay, _apply_async, _apply_periodic_async
 from negotium.brokers.main import MessageBroker
 from negotium.mq.consumer import _Consumer
@@ -29,7 +29,7 @@ class Negotium:
 
     Note: This class should be instantiated at the entry point of your application.
     """
-    def __init__(self, app_name: str, broker: MessageBroker, logfile: str=DEFAULT_LOGFILE):
+    def __init__(self, app_name: str, broker: MessageBroker, logfile: str=None):
         self.app_name = app_name
         if not self.app_name:
             raise ValueError("app_name must be set")

@@ -32,7 +32,11 @@ broker = Redis(
 )
 
 # create negotium app
-app = Negotium(app_name="<YOUR_APP_NAME>", broker=broker)
+app = Negotium(
+    app_name="<YOUR_APP_NAME>", 
+    broker=broker,
+    log_file="<PATH_TO_LOG_FILE>" # optional. Defaults to stdout
+)
 app.start()
 
 @app.task
