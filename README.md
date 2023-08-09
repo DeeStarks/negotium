@@ -1,6 +1,6 @@
 # Negotium
 
-A simple, lightweight, and easy-to-use task/job queue for Python. It tries to mimic the implementation of celery and celery beat, but without the complexity and overhead. For now, it offers only a minimal set of features, which will be expanded. It also currently only supports Redis as the broker; however, it is planned to support other brokers in the future.
+A simple, lightweight, and easy-to-use task/job queue for Python. It tries to mimic the implementation of celery and celery beat, but without the complexity and overhead to setup. For now, it offers only a minimal set of features, which will be expanded. It also currently only supports Redis as the broker; however, it is planned to support other brokers in the future.
 
 ## Installation
 
