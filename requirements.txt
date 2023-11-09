@@ -14,7 +14,7 @@ sortedcontainers==2.4.0
     # via negotium (pyproject.toml)
 typeguard==3.0.2
     # via negotium (pyproject.toml)
-typing-extensions==4.5.0
+typing-extensions>=4.5.0
     # via
     #   negotium (pyproject.toml)
     #   typeguard
