@@ -1,6 +1,10 @@
 # Negotium
 
-A simple, lightweight, and easy-to-use task/job queue for Python. It tries to mimic the implementation of celery and celery beat, but without the complexity and overhead to setup. For now, it offers only a minimal set of features, which will be expanded. It also currently only supports Redis as the broker; however, it is planned to support other brokers in the future.
+A simple, lightweight, and easy-to-use task/job queue for Python. It provides a simple API for running tasks asynchronously, scheduling tasks to run at a specific time, and running tasks periodically.
+
+Unlike celery, negotium is designed to be simple and easy to use. It does not require a separate worker process to run tasks. Instead, it uses a single-threaded event loop to run tasks asynchronously. This makes it ideal for small to medium-sized projects that do not require the complexity of a full-blown task queue.
+
+> Negotium supports only Redis as a broker for now. Support for other brokers will be added in the future.
 
 ## Installation
 
@@ -141,9 +145,9 @@ def my_async_view(request):
     return HttpResponse("Hello, world!")
 
 def my_scheduled_view(request):
-    add.apply_async(
+    add.apply_async( # <-- Schedule the task to run at a specific time
         args=(1, 2), eta=datetime.datetime.now() + datetime.timedelta(seconds=10)
-    ) # <-- Schedule the task to run at a specific time
+    )
     return HttpResponse("Hello, world!")
 
 def my_periodic_view(request):

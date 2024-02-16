@@ -2,7 +2,7 @@ import json
 import redis
 import uuid
 
-from negotium import settings
+from negotium import conf
 from negotium.brokers.main import MessageBroker, BROKER_REDIS
 
 _COMMAND_REDIS_ZREM = 0
@@ -29,7 +29,7 @@ class _MessageTracker:
         """
         uuid_ = uuid_ or str(uuid.uuid4())
         if self.broker.get_broker_name() == BROKER_REDIS:
-            self.connection.lpush(settings._MESSAGE_TRACKER + "__" + self.app_name + "__" + uuid_, json.dumps({
+            self.connection.lpush(conf._MESSAGE_TRACKER + "__" + self.app_name + "__" + uuid_, json.dumps({
                 '_name': name,
                 '_identifier': identifier,
                 '_command': command
@@ -42,7 +42,7 @@ class _MessageTracker:
         """Delete a message from the tracker
         """
         if self.broker.get_broker_name() == BROKER_REDIS:
-            messages = self.connection.lrange(settings._MESSAGE_TRACKER + "__" + self.app_name + "__" + uuid_, 0, -1)
+            messages = self.connection.lrange(conf._MESSAGE_TRACKER + "__" + self.app_name + "__" + uuid_, 0, -1)
             for message in messages:
                 data = json.loads(message)
                 if data.get('_command') == _COMMAND_REDIS_ZREM:
@@ -51,6 +51,6 @@ class _MessageTracker:
                     self.connection.lrem(data.get('_name'), 0, data.get('_identifier'))
                 elif data.get('_command') == _COMMAND_REDIS_BLPOP:
                     self.connection.blpop(data.get('_identifier'))
-            self.connection.delete(settings._MESSAGE_TRACKER + "__" + self.app_name + "__" + uuid_)
+            self.connection.delete(conf._MESSAGE_TRACKER + "__" + self.app_name + "__" + uuid_)
         else:
             raise NotImplementedError("Broker not implemented")

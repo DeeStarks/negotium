@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from negotium.settings import LOGGING_FORMAT, LOGGING_DATE_FORMAT
+from negotium.conf import LOGGING_FORMAT, LOGGING_DATE_FORMAT
 
 def log(logfile: str, app_name: str, message: str, level: str="INFO"):
     """Log a message to a file if a logfile is provided.

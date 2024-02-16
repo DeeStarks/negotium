@@ -12,7 +12,7 @@ from threading import Thread, Timer
 
 from negotium.brokers.main import MessageBroker, BROKER_REDIS
 from negotium.mq.trackers import _MessageTracker
-from negotium.settings import (
+from negotium.conf import (
     _MESSAGE_MAIN, _MESSAGE_SCHEDULER, _MESSAGE_SCHEDULER_SORTED_SET, _MESSAGE_PERIODIC_TASKS
 )
 from negotium.utils.logger import log
@@ -150,6 +150,7 @@ class _Consumer:
             res = function(*args, **kwargs)
             log(self.logfile, app_name, 
                 f"{'[Scheduled] ' if is_scheduled else ''}Result (task: {function_name}): {res}", level="INFO")
+            return res
         except Exception as e:
             log(self.logfile, app_name, 
                 f"{'[Scheduled] ' if is_scheduled else ''}Error (task: {function_name}): {e}", level="ERROR")

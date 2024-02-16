@@ -5,7 +5,7 @@ import redis
 from negotium.brokers.main import MessageBroker, BROKER_REDIS
 from negotium.mq.trackers import _MessageTracker
 from negotium.mq.trackers import _COMMAND_REDIS_ZREM, _COMMAND_REDIS_LREM, _COMMAND_REDIS_BLPOP
-from negotium.settings import (
+from negotium.conf import (
     _MESSAGE_MAIN, _MESSAGE_SCHEDULER, _MESSAGE_SCHEDULER_SORTED_SET, _MESSAGE_PERIODIC_TASKS
 )
 from negotium.schedules.crontab import Crontab

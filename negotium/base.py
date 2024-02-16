@@ -2,7 +2,7 @@ import datetime
 import inspect
 from functools import wraps
 
-from .settings import DEFAULT_HOST, DEFAULT_PORT
+from .conf import DEFAULT_HOST, DEFAULT_PORT
 from .task import _delay, _apply_async, _apply_periodic_async
 from negotium.brokers.main import MessageBroker
 from negotium.mq.consumer import _Consumer
